@@ -113,7 +113,7 @@ bool service::sread()
 
 bool service::swrite()
 {
-	printf("This is write()\n");
+	printf("This is write() m_write_idx=%d\n",m_write_idx);
 	printf("In swrite() write_buf is %s \n",write_buf);
 	int temp=0;
 	int bytes_have_send=0;
@@ -122,7 +122,7 @@ bool service::swrite()
 	{
 		printf("bytes_to_send = 0\n");
 		modfd(m_epollfd,m_sockfd,EPOLLIN);
-		//init();
+		init();
 		return true;
 	}
 
@@ -146,6 +146,8 @@ bool service::swrite()
 			return false;
 		}
 	}
+	memset(write_buf,'\0',WRITE_BUFFER_SIZE);
+	m_write_idx=0;
 }
 
 void service::do_url()
@@ -168,11 +170,10 @@ void service::add_page_error(int status,char* s_status,char* msg)
 
 void service::add_http_head(int status, char *s_status, char *filetype)
 {
-	add_response("HTTP/1.1 %d %s\r\n", status, s_status);
-    add_response("%sServer: Reage Web Server\r\n", write_buf);
-    add_response("%sContent-Type: %s\r\n\r\n", write_buf, filetype);
-	printf("In add_http_head() write_buf is %s\n",write_buf);
-	//write(m_sockfd,write_buf,m_write_idx);
+	add_response("%s %d %s\r\n","HTTP?1.1,", status, s_status);
+	add_response("Content-Length: %d \r\n", m_file_stat.st_size);
+	add_response("%s","\r\n");
+
 }
 
 bool service::add_response(const char* format,...)
@@ -196,35 +197,42 @@ bool service::add_response(const char* format,...)
 
 int service::send_html()
 {
+
 	int f;
 	int tmp;
 	printf("m_url = %s\n",m_url);
-	if(strlen(m_url)==1)
+	m_url=strchr(m_url,'/');
+	if(strlen(m_url)==1||!strcasecmp(m_url,"/favicon.ico"))
 	{
+		printf("exec strcpy\n");
 		strcpy(m_url,"index.html");
-
 	}
-
+	else
+	{
+		printf("exec strchr\n");
+		m_url=m_url+1;
+		printf("m_url is %s\n",m_url);
+	}
 	if(stat(m_url,&m_file_stat)>=0)
 	{
 		//add_page_error(404,"Not found", "Not found<br/> Reage does not implement this mothod\n");
 		printf("file exist\n");
 
-	}/*
-	if(!(S_ISREG(m_file_stat.st_mode))||!(S_IRUSR&m_file_stat.st_mode))
+	}
+	else if(!(S_ISREG(m_file_stat.st_mode))||!(S_IRUSR&m_file_stat.st_mode))
 	{
 		add_page_error(403 , "Forbidden", "Forbidden<br/> Reage couldn't read the file\n");
 		return 1;
-	}*/
-	//add_http_head( 200, "OK", "text/html" );
+	}
+	add_http_head( 200, "OK", "text/html" );
 	f=open(m_url,O_RDONLY);
-	/*if(f<0)
+	if(f<0)
 	{
 		add_page_error(404, "Not found", "Not found<br/> Reage couldn't read the file\n");
-	}*/
-	//write_buf[WRITE_BUFFER_SIZE-1]='\n';
+	}
+
 	tmp=read(f,write_buf+m_write_idx,m_file_stat.st_size);
-	m_write_idx=m_file_stat.st_size;
+	m_write_idx+=m_file_stat.st_size;
 	return 1;
 }
 

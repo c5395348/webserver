@@ -21,7 +21,7 @@
 
 #define MAX_FD 1024
 extern void addfd(int epollfd,int fd,bool one_shot);
-
+extern void modfd(int epollfd,int fd,int ev);
 void addsig(int sig,void(handler)(int),bool restart=true)
 {
 	struct sigaction sa;
@@ -113,7 +113,7 @@ int main(int argc,char* argv[])
 			else if(events[i].events&(EPOLLRDHUP|EPOLLHUP|EPOLLERR))
 			{
 				printf("events is EPOLLRDHUP|EPOLLHUP|EPOLLERR\n");
-				close_conn(epollfd,sockfd);
+				users[sockfd].close_conn();
 			}
 			else if(events[i].events&EPOLLIN)
 			{
@@ -127,7 +127,7 @@ int main(int argc,char* argv[])
 				}
 				else
 				{
-					//users[sockfd].close_conn();
+					users[sockfd].close_conn();
 				}
 			}
 			else if(events[i].events&EPOLLOUT)
@@ -136,7 +136,7 @@ int main(int argc,char* argv[])
 				sockfd=events[i].data.fd;
 				if(users[sockfd].swrite())
 				{
-					//users[sockfd].close_conn();
+
 				}
 			}
 		}

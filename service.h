@@ -70,10 +70,10 @@ class service
 	int m_write_idx;
 
 	CHECK_STATE m_check_state;
-	char m_method[100];
+	char* m_method=new char[100];
 
-	char m_url[100];
-	char m_version[100];
+	char* m_url=new char[100];
+	char* m_version=new char[100];
 	char* m_host;
 	int m_content_length;
 
@@ -83,8 +83,7 @@ class service
 
 	char* m_file_address;
 	struct stat m_file_stat;
-	struct iovec m_iv[2];
-	int m_iv_count;
+
 
 
 };
