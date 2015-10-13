@@ -136,7 +136,7 @@ int main(int argc,char* argv[])
 				sockfd=events[i].data.fd;
 				if(users[sockfd].swrite())
 				{
-
+					//users[sockfd].close_conn();
 				}
 			}
 		}

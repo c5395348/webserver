@@ -123,12 +123,12 @@ bool service::swrite()
 		printf("bytes_to_send = 0\n");
 		modfd(m_epollfd,m_sockfd,EPOLLIN);
 		init();
-		return true;
+		return false;
 	}
 
 	while(1)
 	{
-		temp=write(m_sockfd,write_buf,m_write_idx);
+		temp=write(m_sockfd,write_buf,bytes_to_send);
 		if(temp<=-1)
 		{
 			if(errno==EAGAIN)
@@ -140,14 +140,14 @@ bool service::swrite()
 		}
 		bytes_to_send-=temp;
 		bytes_have_send+=temp;
-		if(bytes_to_send<=bytes_have_send)
+		if(bytes_to_send==0)
 		{
+			init();
 			modfd(m_epollfd,m_sockfd,EPOLLIN);
-			return false;
+			return true;
 		}
 	}
-	memset(write_buf,'\0',WRITE_BUFFER_SIZE);
-	m_write_idx=0;
+
 }
 
 void service::do_url()
@@ -164,17 +164,45 @@ void service::do_url()
 void service::add_page_error(int status,char* s_status,char* msg)
 {
     add_response("<html><head></head><body><h1> %s </h1><hr>Reage Web Server 0.01</body></head>", msg);
-	printf("In add_page_error() write_buf is %s\n",write_buf);
     add_http_head(status, s_status, "text/html");
 }
 
 void service::add_http_head(int status, char *s_status, char *filetype)
 {
-	add_response("%s %d %s\r\n","HTTP?1.1,", status, s_status);
-	add_response("Content-Length: %d \r\n", m_file_stat.st_size);
-	add_response("%s","\r\n");
+	add_status_line(status, s_status);
+	add_date();
+	add_content_length(m_file_stat.st_size);
+	add_blank_line();
 
 }
+
+bool service::add_status_line(int status,const char* title)
+{
+	return add_response("%s %d %s\r\n","HTTP/1.1,",status,title);
+}
+
+bool service::add_content_length(int content_len)
+{
+	return add_response("Content-Length: %d \r\n",content_len);
+}
+
+bool service::add_blank_line()
+{
+	return add_response("%s","\r\n");
+}
+
+bool service::add_content(const char* content)
+{
+	return add_response("%s",content);
+}
+
+bool service::add_date()
+{
+	time_t timep;
+	time (&timep);
+	return add_response("Date: %s",ctime(&timep));
+}
+
 
 bool service::add_response(const char* format,...)
 {
